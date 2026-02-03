@@ -1,0 +1,15 @@
+[package]
+name = "distr-combinators"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "A standalone library of combinators for rand::Distribution"
+repository = "https://github.com/luketpeterson/distr-combinators"
+readme = "README.md"
+keywords = ["rand", "distr", "distribution", "combinators", "fuzzer"]
+categories = ["algorithms", "mathematics"]
+
+[dependencies]
+rand = "0.9.0"
+rand_distr = "0.5.1"
+indexmap = "2.13.0"
