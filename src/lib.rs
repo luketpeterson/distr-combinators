@@ -13,6 +13,20 @@ use std::marker::PhantomData;
 pub mod histogram;
 pub use histogram::Histogram;
 
+/// A distribution that uniformly samples over the exclusive range `[0,max[`
+#[derive(Clone)]
+struct Enumeration { u: Uniform<usize>, n: usize }
+impl Enumeration {
+  fn new(max: usize) -> Self {
+    Enumeration{ u: Uniform::try_from(0..max).unwrap(), n: max }
+  }
+}
+impl Distribution<usize> for Enumeration {
+  fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> usize {
+    self.u.sample(rng)
+  }
+}
+
 /// A distribution that samples from `d` but rejects values that do not satisfy predicate `p`.
 #[derive(Clone)]
 pub struct Filtered<T, D : Distribution<T> + Clone, P : Fn(&T) -> bool> { pub d: D, pub p: P, pub pd: PhantomData<T> }
