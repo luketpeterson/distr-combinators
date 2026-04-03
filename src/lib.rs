@@ -16,6 +16,11 @@ pub use histogram::Histogram;
 /// A distribution that samples from `d` but rejects values that do not satisfy predicate `p`.
 #[derive(Clone)]
 pub struct Filtered<T, D : Distribution<T> + Clone, P : Fn(&T) -> bool> { pub d: D, pub p: P, pub pd: PhantomData<T> }
+impl <T, D : Distribution<T> + Clone, P : Fn(&T) -> bool> Filtered<T, D, P> {
+  pub fn new(d: D, p: P) -> Self {
+    Self { d, p, pd: PhantomData::default() }
+  }
+}
 impl <T, D : Distribution<T> + Clone, P : Fn(&T) -> bool> Distribution<T> for Filtered<T, D, P> {
   fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> T {
     loop {
@@ -28,6 +33,11 @@ impl <T, D : Distribution<T> + Clone, P : Fn(&T) -> bool> Distribution<T> for Fi
 /// A distribution that maps values sampled from `d` using function `f`.
 #[derive(Clone)]
 pub struct Mapped<T, S, D : Distribution<T> + Clone, F : Fn(T) -> S + Clone> { pub d: D, pub f: F, pub pd: PhantomData<(T, S)> }
+impl <T, S, D : Distribution<T> + Clone, F : Fn(T) -> S + Clone> Mapped<T, S, D, F> {
+  pub fn new(d: D, f: F) -> Self {
+    Self { d, f, pd: PhantomData::default() }
+  }
+}
 impl <T, S, D : Distribution<T> + Clone, F : Fn(T) -> S + Clone> Distribution<S> for Mapped<T, S, D, F> {
   fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> S {
     (self.f)(self.d.sample(rng))
@@ -37,6 +47,11 @@ impl <T, S, D : Distribution<T> + Clone, F : Fn(T) -> S + Clone> Distribution<S>
 /// A distribution that samples from `d`, maps using `pf`, and retries if `pf` returns `None`.
 #[derive(Clone)]
 pub struct Collected<T, S, D : Distribution<T> + Clone, P : Fn(T) -> Option<S> + Clone> { pub d: D, pub pf: P, pub pd: PhantomData<(T, S)> }
+impl <T, S, D : Distribution<T> + Clone, P : Fn(T) -> Option<S> + Clone> Collected<T, S, D, P> {
+  pub fn new(d: D, pf: P) -> Self {
+    Self { d, pf, pd: PhantomData::default() }
+  }
+}
 impl <T, S, D : Distribution<T> + Clone, P : Fn(T) -> Option<S> + Clone> Distribution<S> for Collected<T, S, D, P> {
   fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> S {
     loop {
@@ -53,6 +68,11 @@ impl <T, S, D : Distribution<T> + Clone, P : Fn(T) -> Option<S> + Clone> Distrib
 #[derive(Clone)]
 pub struct Product2<X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, Z, F : Fn(X, Y) -> Z + Clone> { pub dx: DX, pub dy: DY, pub f: F,
   pub pd: PhantomData<(X, Y, Z)> }
+impl <X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, Z, F : Fn(X, Y) -> Z + Clone> Product2<X, DX, Y, DY, Z, F> {
+  pub fn new(dx: DX, dy: DY, f: F) -> Self {
+    Self { dx, dy, f, pd: PhantomData::default() }
+  }
+}
 impl <X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, Z, F : Fn(X, Y) -> Z + Clone> Distribution<Z> for Product2<X, DX, Y, DY, Z, F> {
   fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Z {
     (self.f)(self.dx.sample(rng), self.dy.sample(rng))
@@ -63,6 +83,11 @@ impl <X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, Z, F : F
 #[derive(Clone)]
 pub struct Choice2<X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, DB : Distribution<bool> + Clone> { pub dx: DX, pub dy: DY, pub db: DB,
   pub pd: PhantomData<(X, Y)> }
+impl <X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, DB : Distribution<bool> + Clone> Choice2<X, DX, Y, DY, DB> {
+  pub fn new(dx: DX, dy: DY, db: DB) -> Self {
+    Self { dx, dy, db, pd: PhantomData::default() }
+  }
+}
 impl <X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, DB : Distribution<bool> + Clone> Distribution<Result<X, Y>> for Choice2<X, DX, Y, DY, DB> {
   fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Result<X, Y> {
     if self.db.sample(rng) { Ok(self.dx.sample(rng)) }
@@ -74,6 +99,11 @@ impl <X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, DB : Dis
 #[derive(Clone)]
 pub struct Dependent2<X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, FDY : Fn(X) -> DY + Clone> { pub dx: DX, pub fdy: FDY,
   pub pd: PhantomData<(X, Y)> }
+impl <X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, FDY : Fn(X) -> DY + Clone> Dependent2<X, DX, Y, DY, FDY> {
+  pub fn new(dx: DX, fdy: FDY) -> Self {
+    Self { dx, fdy, pd: PhantomData::default() }
+  }
+}
 impl <X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, FDY : Fn(X) -> DY + Clone> Distribution<Y> for Dependent2<X, DX, Y, DY, FDY> {
   fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Y {
     (self.fdy)(self.dx.sample(rng)).sample(rng)
@@ -84,6 +114,11 @@ impl <X, DX : Distribution<X> + Clone, Y, DY : Distribution<Y> + Clone, FDY : Fn
 #[derive(Clone)]
 pub struct Concentrated<X, DX : Distribution<X> + Clone, A : Clone, Y, FA : Fn(&mut A, X) -> Option<Y>> { pub dx: DX, pub z: A, pub fa: FA,
   pub pd: PhantomData<(X, Y)> }
+impl <X, DX : Distribution<X> + Clone, A : Clone, Y, FA : Fn(&mut A, X) -> Option<Y>> Concentrated<X, DX, A, Y, FA> {
+  pub fn new(dx: DX, z: A, fa: FA) -> Self {
+    Self { dx, z, fa, pd: PhantomData::default() }
+  }
+}
 impl <X, DX : Distribution<X> + Clone, A : Clone, Y, FA : Fn(&mut A, X) -> Option<Y>> Distribution<Y> for Concentrated<X, DX, A, Y, FA> {
   fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Y {
     let mut a = self.z.clone();
@@ -100,6 +135,11 @@ impl <X, DX : Distribution<X> + Clone, A : Clone, Y, FA : Fn(&mut A, X) -> Optio
 #[derive(Clone)]
 pub struct Diluted<X, DX : Distribution<X> + Clone, A : Clone, Y, FA : Fn(X) -> A, FAY : Fn(&mut A) -> Option<Y>> { pub dx: DX, pub fa: FA, pub fay: FAY,
   pub pd: PhantomData<(X, A, Y)> }
+impl <X, DX : Distribution<X> + Clone, A : Clone, Y, FA : Fn(X) -> A, FAY : Fn(&mut A) -> Option<Y>> Diluted<X, DX, A, Y, FA, FAY> {
+  pub fn new(dx: DX, fa: FA, fay: FAY) -> Self {
+    Self { dx, fa, fay, pd: PhantomData::default() }
+  }
+}
 impl <X, DX : Distribution<X> + Clone, A : Clone, Y, FA : Fn(X) -> A, FAY : Fn(&mut A) -> Option<Y>> Distribution<Y> for Diluted<X, DX, A, Y, FA, FAY> {
   fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Y {
     let mut a = (self.fa)(self.dx.sample(rng));
@@ -114,6 +154,11 @@ impl <X, DX : Distribution<X> + Clone, A : Clone, Y, FA : Fn(X) -> A, FAY : Fn(&
 /// A constant distribution that always returns `element`.
 #[derive(Clone)]
 pub struct Degenerate<T : Clone> { pub element: T }
+impl <T : Clone> Degenerate<T> {
+  pub fn new(element: T) -> Self {
+    Self { element }
+  }
+}
 impl <T : Clone> Distribution<T> for Degenerate<T> {
   fn sample<R: Rng + ?Sized>(&self, _rng: &mut R) -> T {
     self.element.clone()
@@ -123,6 +168,11 @@ impl <T : Clone> Distribution<T> for Degenerate<T> {
 /// A categorical distribution that selects from `elements` based on an index distribution `ed`.
 #[derive(Clone)]
 pub struct Categorical<T : Clone, ElemD : Distribution<usize> + Clone> { pub elements: Vec<T>, pub ed: ElemD }
+impl <T : Clone, ElemD : Distribution<usize> + Clone> Categorical<T, ElemD> {
+  pub fn new(elements: Vec<T>, ed: ElemD) -> Self {
+    Self { elements, ed }
+  }
+}
 impl <T : Clone, ElemD : Distribution<usize> + Clone> Distribution<T> for Categorical<T, ElemD> {
   fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> T {
     self.elements[self.ed.sample(rng)].clone()
@@ -153,6 +203,11 @@ pub fn ratios<T : Clone>(ep: impl IntoIterator<Item=(T, usize)>) -> Categorical<
 /// A distribution that generates a vector of items with length sampled from `lengthd` and items from `itemd`.
 #[derive(Clone)]
 pub struct Repeated<T, LengthD : Distribution<usize>, ItemD : Distribution<T>> { pub lengthd: LengthD, pub itemd: ItemD, pub pd: PhantomData<T> }
+impl <T, LengthD : Distribution<usize>, ItemD : Distribution<T>> Repeated<T, LengthD, ItemD> {
+  pub fn new(lengthd: LengthD, itemd: ItemD) -> Self {
+    Self { lengthd, itemd, pd: PhantomData::default() }
+  }
+}
 impl <T, LengthD : Distribution<usize>, ItemD : Distribution<T>> Distribution<Vec<T>> for Repeated<T, LengthD, ItemD> {
   fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Vec<T> {
     let l = self.lengthd.sample(rng);
@@ -162,9 +217,14 @@ impl <T, LengthD : Distribution<usize>, ItemD : Distribution<T>> Distribution<Ve
 
 /// A distribution that generates a vector of bytes by sampling from `mbd` until `None` is returned.
 #[derive(Clone)]
-pub struct Sentinel<MByteD : Distribution<Option<u8>> + Clone> { pub mbd: MByteD }
-impl <MByteD : Distribution<Option<u8>> + Clone> Distribution<Vec<u8>> for Sentinel<MByteD> {
-  fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Vec<u8> {
+pub struct Sentinel<T, ItemD : Distribution<Option<T>> + Clone> { pub mbd: ItemD, pub pd: PhantomData<T> }
+impl <T, ItemD : Distribution<Option<T>> + Clone> Sentinel<T, ItemD> {
+  pub fn new(mbd: ItemD) -> Self {
+    Self { mbd, pd: PhantomData::default() }
+  }
+}
+impl <T, ItemD : Distribution<Option<T>> + Clone> Distribution<Vec<T>> for Sentinel<T, ItemD> {
+  fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Vec<T> {
     let mut v = vec![];
     while let Some(e) = self.mbd.sample(rng) {
       v.push(e)
@@ -190,11 +250,11 @@ mod tests {
     let rng = StdRng::from_seed([0; 32]);
     let sx = Uniform::new(0.0, 1.0).unwrap();
     let sy = Uniform::new(0.0, 1.0).unwrap();
-    let sxy = Product2 { dx: sx, dy: sy, f: |x, y| (x, y), pd: PhantomData::default() };
-    let spi = Concentrated { dx: sxy, z: (0, 0), fa: |i_o, (x, y)| {
+    let sxy = Product2::new(sx, sy, |x, y| (x, y));
+    let spi = Concentrated::new(sxy, (0, 0), |i_o, (x, y)| {
       if x*x + y*y < 1.0 { i_o.0 += 1 } else { i_o.1 += 1 }
       if i_o.0 + i_o.1 > SAMPLES { Some(4f64*(i_o.0 as f64/(i_o.0 + i_o.1) as f64)) } else { None }
-    }, pd: Default::default() };
+    });
 
     spi.sample_iter(rng).take(10).for_each(|api| {
       let err_bar = 3.5f64 / (SAMPLES as f64).sqrt();
